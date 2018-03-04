@@ -28,4 +28,4 @@ GDBMACROS="/home/YOURID/cmsc326/pintos/src/misc/gdb-macros"
 - Change directory to pintos/src/threads.  Now run a test program
   "pintos run alarm-multiple"
 
-Pintos should run and load several threads in a QEMU terminal.
+Pintos should run and load several threads in a QEMU terminal.# pintos
