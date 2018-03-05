@@ -99,29 +99,18 @@ timer_sleep (int64_t ticks)
     if(ticks <= 0)
         return;
 
-    struct semaphore s1;
-    struct semaphore s2;
-    sema_init(&s1, 1);
-    sema_init(&s2, 1);
-    sema_down(&s1);
-    
     int64_t start = timer_ticks();
     struct thread *cur = thread_current();
     ASSERT(intr_get_level() == INTR_ON);
 
-    sema_down(&s2);
     cur->sleep = start+ticks;
     //printf("CURRENT IS: %s\n", cur->other_name);    
-    struct thread *t = (struct thread *) malloc(sizeof(struct thread));
-    t = cur;
+    struct thread *t = cur;
     t->other_name[0] = count + '0';
-    list_push_back(&wait_list, &t->elem);
+    list_push_back(&wait_list, &t->lm);
     ++count;
-    printf("ADDING %s TO THE LIST\n", t->other_name);
+    //printf("ADDING %s TO THE LIST\n", t->other_name);
     sema_down(&cur->sema);
-
-    sema_down(&s2);
-    sema_up(&s1);
 
 
   //  while (timer_elapsed (start) < ticks) 
@@ -210,19 +199,21 @@ timer_interrupt (struct intr_frame *args UNUSED)
     //int size = list_size(&wait_list);
     for(e=list_begin(&wait_list);e!=list_end(&wait_list);e=list_next(e))
     {
-        struct thread *t = list_entry(e, struct thread, elem);
-        printf("\nthread %s status: %d->\n", t->other_name, t->status);
-        if(t->sleep <= timer_ticks())
+        struct thread *t = list_entry(e, struct thread, lm);
+        (t->sleep)--;
+        /*printf("\nthread %s, status: %d, sleep time: %"PRIu64"\n", t->other_name,
+               t->status, (int64_t)t->sleep);*/
+        if(t->sleep == 0)
         {
             //printf("\nLIST SIZE: %d\n", size);
-            printf("REMOVING thread %s status: %d!\n", t->other_name,
-                   t->status);
+           // printf("REMOVING thread %s status: %d!\n", t->other_name,
+            //       t->status);
             //printf("REMOVING: %s!\n", t->other_name);
             //printf("\nthread %s is %d\n", t->other_name, t->status);
-            //list_remove(&t->elem);
+            list_remove(&t->elem);
             sema_up(&t->sema);
-            printf("REMOVED thread %s status: %d!\n", t->other_name,
-                   t->status);
+            //printf("REMOVED thread %s status: %d!\n", t->other_name,
+             //      t->status);
 
         }
     }

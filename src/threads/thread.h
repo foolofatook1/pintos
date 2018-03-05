@@ -95,7 +95,7 @@ struct thread
     int64_t sleep;                      /* How long to block for */
     struct semaphore sema;              /* A semaphore to block */
     char other_name[1];
-
+    struct list_elem lm;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
