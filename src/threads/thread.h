@@ -91,8 +91,10 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    
     int64_t sleep;                      /* How long to block for */
     struct semaphore sema;              /* A semaphore to block */
+    char other_name[1];
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */

@@ -33,8 +33,9 @@ static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
 /* List of processes in THREAD_BLOCKED state. */
-static struct list wait_list;
+/*static*/struct list wait_list;
 
+int count; /*deletable*/
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
     void
@@ -42,7 +43,7 @@ timer_init (void)
 {
     pit_configure_channel (0, 2, TIMER_FREQ);
     intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-    list_init (&wait_list); // initialization of timer list
+    list_init(&wait_list); // initialization of timer list
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -97,29 +98,34 @@ timer_sleep (int64_t ticks)
 {
     if(ticks <= 0)
         return;
-  
-   struct semaphore s;
-   sema_init(&s, 1);
-   sema_down(&s);
 
-   int64_t start = timer_ticks();
-   struct thread *cur = thread_current();
-   ASSERT(intr_get_level() == INTR_ON);
-   
-   cur->sleep = start+ticks;
-   //printf("sema value: %d\n", &cur->sema->value);
-   struct thread *t = (struct thread *) malloc(sizeof(struct thread));
-   t = cur;
-   list_push_back(&wait_list, &t->elem);
-   printf("ADDING TO THE LIST\n");
-   sema_down(&cur->sema);
+    struct semaphore s1;
+    struct semaphore s2;
+    sema_init(&s1, 1);
+    sema_init(&s2, 1);
+    sema_down(&s1);
+    
+    int64_t start = timer_ticks();
+    struct thread *cur = thread_current();
+    ASSERT(intr_get_level() == INTR_ON);
 
-   sema_up(&s);
-   //sema_up(&cur->sema);
-   //printf("TICKS: %" PRId64 "\n",cur->sleep);
+    sema_down(&s2);
+    cur->sleep = start+ticks;
+    //printf("CURRENT IS: %s\n", cur->other_name);    
+    struct thread *t = (struct thread *) malloc(sizeof(struct thread));
+    t = cur;
+    t->other_name[0] = count + '0';
+    list_push_back(&wait_list, &t->elem);
+    ++count;
+    printf("ADDING %s TO THE LIST\n", t->other_name);
+    sema_down(&cur->sema);
 
-   /*while (timer_elapsed (start) < ticks) 
-        thread_yield ();*/
+    sema_down(&s2);
+    sema_up(&s1);
+
+
+  //  while (timer_elapsed (start) < ticks) 
+   //   thread_yield ();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -199,21 +205,26 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
     ticks++;
     thread_tick ();
-    int count = 0;
+
     struct list_elem *e;
-    for(e = list_begin(&wait_list);
-        e != list_end(&wait_list);
-        e = list_next(e))
+    //int size = list_size(&wait_list);
+    for(e=list_begin(&wait_list);e!=list_end(&wait_list);e=list_next(e))
     {
         struct thread *t = list_entry(e, struct thread, elem);
-        if(t->sleep >= timer_ticks())
+        printf("\nthread %s status: %d->\n", t->other_name, t->status);
+        if(t->sleep <= timer_ticks())
         {
-            printf("HELLO!\n");
-        //    list_remove(&t->elem);
-           sema_up(&t->sema);
+            //printf("\nLIST SIZE: %d\n", size);
+            printf("REMOVING thread %s status: %d!\n", t->other_name,
+                   t->status);
+            //printf("REMOVING: %s!\n", t->other_name);
+            //printf("\nthread %s is %d\n", t->other_name, t->status);
+            //list_remove(&t->elem);
+            sema_up(&t->sema);
+            printf("REMOVED thread %s status: %d!\n", t->other_name,
+                   t->status);
+
         }
-        ++count;
-        printf("count: %d\n", count);
     }
 }
 
