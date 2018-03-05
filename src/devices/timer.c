@@ -33,7 +33,7 @@ static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
 /* List of processes in THREAD_BLOCKED state. */
-/*static*/struct list wait_list;
+static struct list wait_list;
 
 int count; /*deletable*/
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
@@ -103,18 +103,12 @@ timer_sleep (int64_t ticks)
     struct thread *cur = thread_current();
     ASSERT(intr_get_level() == INTR_ON);
 
-    cur->sleep = start+ticks;
-    //printf("CURRENT IS: %s\n", cur->other_name);    
+    cur->sleep = ticks;
     struct thread *t = cur;
-    t->other_name[0] = count + '0';
+    //t->other_name[0] = count + '0';
     list_push_back(&wait_list, &t->lm);
-    ++count;
-    //printf("ADDING %s TO THE LIST\n", t->other_name);
+    //++count;
     sema_down(&cur->sema);
-
-
-  //  while (timer_elapsed (start) < ticks) 
-   //   thread_yield ();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -201,20 +195,10 @@ timer_interrupt (struct intr_frame *args UNUSED)
     {
         struct thread *t = list_entry(e, struct thread, lm);
         (t->sleep)--;
-        /*printf("\nthread %s, status: %d, sleep time: %"PRIu64"\n", t->other_name,
-               t->status, (int64_t)t->sleep);*/
-        if(t->sleep == 0)
+        if(t->sleep <= 0)
         {
-            //printf("\nLIST SIZE: %d\n", size);
-           // printf("REMOVING thread %s status: %d!\n", t->other_name,
-            //       t->status);
-            //printf("REMOVING: %s!\n", t->other_name);
-            //printf("\nthread %s is %d\n", t->other_name, t->status);
-            list_remove(&t->elem);
+            list_remove(&t->lm);
             sema_up(&t->sema);
-            //printf("REMOVED thread %s status: %d!\n", t->other_name,
-             //      t->status);
-
         }
     }
 }
