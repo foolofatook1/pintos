@@ -29,6 +29,9 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/* A struct of waiting threads */
+static struct list wait_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -93,6 +96,7 @@ thread_init (void)
     lock_init (&tid_lock);
     list_init (&ready_list);
     list_init (&all_list);
+    list_init (&wait_list);
 
     /* Set up a thread structure for the running thread. */
     initial_thread = running_thread ();
@@ -116,8 +120,6 @@ thread_start (void)
 
     /* Wait for the idle thread to initialize idle_thread. */
     sema_down (&idle_started);
-
-    //test_list();
 }
 
 
@@ -142,7 +144,40 @@ thread_tick (void)
     /* Enforce preemption. */
     if (++thread_ticks >= TIME_SLICE)
         intr_yield_on_return ();
+}
 
+/* Called from thread_ticks() to check to see  what threads
+   are sleeping whenever there is a tick. */
+    void
+thread_wake(void)
+{
+    struct list_elem *e;
+    for(e=list_begin(&wait_list);
+        e!=list_end(&wait_list);
+        e=list_next(e))
+    {
+        struct thread *t = list_entry(e, struct thread, lm);
+        (t->sleep)--;
+        if(t->sleep <= 0)
+        {
+            list_remove(&t->lm);
+            sema_up(&t->sema);
+        }
+    }
+}
+
+/* Called by timer sleep to put thread to sleep for
+   approximately TICKS timer ticks. Interrupts are
+   turned on. */
+    void 
+thread_sleep(int64_t ticks)
+{
+    struct thread *cur = thread_current();
+    ASSERT(intr_get_level() == INTR_ON);
+
+    cur->sleep = ticks;
+    list_push_back(&wait_list, &cur->lm);
+    sema_down(&cur->sema);
 }
 
 /* Prints thread statistics. */

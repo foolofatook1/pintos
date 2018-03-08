@@ -76,6 +76,7 @@ typedef int tid_t;
    set to THREAD_MAGIC.  Stack overflow will normally change this
    value, triggering the assertion. */
 
+
 /* The `elem' member has a dual purpose.  It can be an element in
    the run queue (thread.c), or it can be an element in a
    semaphore wait list (synch.c).  It can be used these two ways
@@ -124,6 +125,9 @@ tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
 void thread_block (void);
 void thread_unblock (struct thread *);
+
+void thread_sleep(int64_t ticks);
+void thread_wake(void);
 
 struct thread *thread_current (void);
 tid_t thread_tid (void);
