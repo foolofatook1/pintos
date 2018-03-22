@@ -32,9 +32,6 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
-/* List of processes in THREAD_BLOCKED state. */
-//static struct list wait_list;
-
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
     void
@@ -42,7 +39,6 @@ timer_init (void)
 {
     pit_configure_channel (0, 2, TIMER_FREQ);
     intr_register_ext (0x20, timer_interrupt, "8254 Timer");
-    //list_init(&wait_list); // initialization of timer list
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */

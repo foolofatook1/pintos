@@ -71,6 +71,8 @@ static struct thread *next_thread_to_run (void);
 static void init_thread (struct thread *, const char *name, int priority);
 static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
+static bool thread_less (const struct list_elem *x,const struct list_elem *y,
+        void *aux UNUSED);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
@@ -149,12 +151,12 @@ thread_tick (void)
 /* Called from thread_ticks() to check to see  what threads
    are sleeping whenever there is a tick. */
     void
-thread_wake(void)
+thread_wake (void)
 {
     struct list_elem *e;
     for(e=list_begin(&wait_list);
-        e!=list_end(&wait_list);
-        e=list_next(e))
+            e!=list_end(&wait_list);
+            e=list_next(e))
     {
         struct thread *t = list_entry(e, struct thread, lm);
         (t->sleep)--;
@@ -170,7 +172,7 @@ thread_wake(void)
    approximately TICKS timer ticks. Interrupts are
    turned on. */
     void 
-thread_sleep(int64_t ticks)
+thread_sleep (int64_t ticks)
 {
     struct thread *cur = thread_current();
     ASSERT(intr_get_level() == INTR_ON);
@@ -376,13 +378,20 @@ thread_foreach (thread_action_func *func, void *aux)
     void
 thread_set_priority (int new_priority) 
 {
-    thread_current ()->priority = new_priority;
+    struct thread *cur = thread_current ();
+    cur->priority = new_priority;
+    if(next_thread_to_run ()->priority > cur->priority)
+        thread_yield();
+    //thread_current ()->priority = new_priority;
 }
 
-/* Returns the current thread's priority. */
+/* Returns the current thread's highest priority. */
     int
 thread_get_priority (void) 
 {
+    if(thread_current ()->dpriority > thread_current ()->priority)
+        return thread_current ()-> dpriority;
+
     return thread_current ()->priority;
 }
 
@@ -525,6 +534,17 @@ alloc_frame (struct thread *t, size_t size)
     return t->stack;
 }
 
+/* Returns true if value A is less than value B, fales otherwise */
+    static bool
+thread_less (const struct list_elem *x, const struct list_elem *y,
+        void *aux UNUSED)
+{
+    const struct thread *a = list_entry(x, struct thread, elem);
+    const struct thread *b = list_entry(y, struct thread, elem);
+
+    return a->priority < b->priority;
+}
+
 /* Chooses and returns the next thread to be scheduled.  Should
    return a thread from the run queue, unless the run queue is
    empty.  (If the running thread can continue running, then it
@@ -536,7 +556,11 @@ next_thread_to_run (void)
     if (list_empty (&ready_list))
         return idle_thread;
     else
-        return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    {
+        struct list_elem *max = list_max(&ready_list, thread_less, NULL);
+        list_remove(max);
+        return list_entry(max, struct thread, elem);
+    }
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -627,9 +651,9 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 /* Compare two threads by their wakeup_time. If wakeup_time 
-    is the same, compare thread priorities to break the tie.
-    If true, first thread has earlier wakeup_time and in case 
-    tie, has higher priority. */
+   is the same, compare thread priorities to break the tie.
+   If true, first thread has earlier wakeup_time and in case 
+   tie, has higher priority. */
 
 /*// One element in the list
   struct mystruct {
