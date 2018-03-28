@@ -3,10 +3,13 @@
 #remove all result files
 rm -rf build/tests/threads/*
 
-declare -a testlist=
-(
+#priority tests
+declare -a testlist=(
     "alarm-multiple.result"
     "alarm-negative.result"
+	"alarm-priority.result"
+	"alarm-simultaneous.result"
+	"alarm-zero.result"
 )
 
 for i in "${testlist[@]}"; do

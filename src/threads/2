@@ -198,11 +198,6 @@ lock_acquire (struct lock *lock)
 
 	struct thread *c = thread_current ();		
 	c->seeking = lock;
-	if(lock->holder != NULL)
-	{
-		struct thread *holder = lock->holder;
-		holder->dpriority = c->priority;
-	}
 
     sema_down (&lock->semaphore);
 
