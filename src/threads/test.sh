@@ -30,3 +30,6 @@ rm -rf build/tests/threads/*
 for i in "${testlist[@]}"; do
 make build/tests/threads/$i
 done
+
+egrep 'PASS|FAIL' build/tests/threads/priority*.result
+egrep 'PASS|FAIL' build/tests/threads/alarm*.result

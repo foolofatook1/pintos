@@ -211,20 +211,23 @@ lock_acquire (struct lock *lock)
 	{
 		struct thread *c = thread_current ();		
 		c->seeking = lock;
-		struct thread *holder = lock->holder;
-		//while(c->seeking != NULL)
-		//{
-		//if(c->priority > c->blocker->holder->priority)
-		//c->seeking->holder->priority = c->priority;
-		//c = c->seeking->holder;
-		//}
-		//break;
-	    if(c->priority > holder->priority)
-			holder->dpriority = c->priority;
-		
+		//struct thread *holder = lock->holder;
+		while(c->seeking != NULL)
+		{
+			if(c->priority > c->seeking->holder->priority)
+			{
+				c->seeking->holder->priority = c->priority;
+				c = c->seeking->holder;
+			}
+			else
+				break;
+		}
+		//if(c->priority > holder->priority)
+		//	holder->dpriority = c->priority;
+
 		sema_down (&lock->semaphore);
 	}
-	
+
 	struct thread *holder = thread_current();
 	lock->holder = holder;
 	list_push_back(&holder->lock_list, &lock->lock_lm);
@@ -262,23 +265,45 @@ lock_release (struct lock *lock)
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
-	struct thread *c = thread_current (); 
+	list_remove(&lock->lock_lm);
 
-	struct list_elem *e;
-	for(e=list_begin(&c->lock_list);
-			e!=list_end(&c->lock_list);
-			e=list_next(e))
+	struct thread *c = thread_current (); 
+	if(list_empty(&c->lock_list))
+		c->priority = c->dpriority;
+	else
 	{
-		struct lock *l = list_entry(e, struct lock, lock_lm);
-		if(l == lock)
+		struct list_elem *e;
+		struct list_elem *f;
+		struct lock *c_lock;
+		struct thread *wait_thread;
+		int h_priority = c->dpriority;
+
+		for(e=list_begin(&c->lock_list);
+				e!=list_end(&c->lock_list);
+				e=list_next(e))
 		{
-			list_remove(&l->lock_lm);
-			break;
+			c_lock = list_entry(e, struct lock, lock_lm);
+
+			for(f=list_begin(&c_lock->semaphore.waiters);
+					f!=list_end(&c_lock->semaphore.waiters);
+					f=list_next(f))
+			{
+				wait_thread = list_entry(f, struct thread, elem);
+				if(wait_thread->priority > h_priority)
+					h_priority = wait_thread->priority;
+			}
 		}
+		c->priority = h_priority;
+		//thread_current ()->dpriority = thread_current ()->priority;
 	}
+
+	/*if(l == lock)
+	  {
+	  list_remove(&l->lock_lm);
+	  break;
+	  }*/
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
-	thread_current ()->dpriority = thread_current ()->priority;
 }
 
 /* Returns true if the current thread holds LOCK, false
