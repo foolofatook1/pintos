@@ -70,7 +70,6 @@ sema_down (struct semaphore *sema)
 	{
 		list_insert_ordered(&sema->waiters, &thread_current()->elem, &thread_max,
 				NULL);
-		//list_push_back (&sema->waiters, &thread_current ()->elem);
 		thread_block ();
 	}
 	sema->value--;
@@ -206,10 +205,13 @@ lock_acquire (struct lock *lock)
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-	if(lock->holder != NULL)
+	/* try_sema_down decreases semaphore if val isn't zero. */
+	/* otherwise returns false */
+	if(!sema_try_down(&lock->semaphore))//lock->holder != NULL)//
 	{
 		struct thread *c = thread_current ();		
 		c->seeking = lock;
+		struct thread *holder = lock->holder;
 		//while(c->seeking != NULL)
 		//{
 		//if(c->priority > c->blocker->holder->priority)
@@ -217,19 +219,16 @@ lock_acquire (struct lock *lock)
 		//c = c->seeking->holder;
 		//}
 		//break;
-		struct thread *holder = lock->holder;
-		holder->dpriority = c->priority;
+	    if(c->priority > holder->priority)
+			holder->dpriority = c->priority;
+		
+		sema_down (&lock->semaphore);
 	}
-	//{
-
-	//	}
-
-	sema_down (&lock->semaphore);
-
-	struct thread *t = thread_current ();
-	lock->holder = thread_current ();
-	list_push_back(&t->lock_list, &lock->lock_lm);
-	t->seeking = NULL;
+	
+	struct thread *holder = thread_current();
+	lock->holder = holder;
+	list_push_back(&holder->lock_list, &lock->lock_lm);
+	holder->seeking = NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
