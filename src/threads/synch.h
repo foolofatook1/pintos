@@ -42,6 +42,10 @@ void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
+bool cond_max (const struct list_elem *x, const struct list_elem *y,
+				void *aux);
+
+
 /* Optimization barrier.
 
    The compiler will not reorder operations across an
