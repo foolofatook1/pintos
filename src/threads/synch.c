@@ -207,23 +207,9 @@ lock_acquire (struct lock *lock)
 
 	/* try_sema_down decreases semaphore if val isn't zero. */
 	/* otherwise returns false */
-	if(!sema_try_down(&lock->semaphore))//lock->holder != NULL)//
+	if(!sema_try_down(&lock->semaphore))
 	{
-		struct thread *c = thread_current ();		
-		c->seeking = lock;
-		//struct thread *holder = lock->holder;
-		while(c->seeking != NULL)
-		{
-			if(c->priority > c->seeking->holder->priority)
-			{
-				c->seeking->holder->priority = c->priority;
-				c = c->seeking->holder;
-			}
-			else
-				break;
-		}
-		//if(c->priority > holder->priority)
-		//	holder->dpriority = c->priority;
+		donate(lock);
 
 		sema_down (&lock->semaphore);
 	}
@@ -232,6 +218,24 @@ lock_acquire (struct lock *lock)
 	lock->holder = holder;
 	list_push_back(&holder->lock_list, &lock->lock_lm);
 	holder->seeking = NULL;
+}
+
+/*	Donates priority. */
+	void
+donate (struct lock *lock)
+{
+	struct thread *c = thread_current ();		
+	c->seeking = lock;
+	while(c->seeking != NULL)
+	{
+		if(c->priority > c->seeking->holder->priority)
+		{
+			c->seeking->holder->priority = c->priority;
+			c = c->seeking->holder;
+		}
+		else
+			break;
+	}
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -271,39 +275,39 @@ lock_release (struct lock *lock)
 	if(list_empty(&c->lock_list))
 		c->priority = c->dpriority;
 	else
-	{
-		struct list_elem *e;
-		struct list_elem *f;
-		struct lock *c_lock;
-		struct thread *wait_thread;
-		int h_priority = c->dpriority;
+		nest_search();
 
-		for(e=list_begin(&c->lock_list);
-				e!=list_end(&c->lock_list);
-				e=list_next(e))
-		{
-			c_lock = list_entry(e, struct lock, lock_lm);
-
-			for(f=list_begin(&c_lock->semaphore.waiters);
-					f!=list_end(&c_lock->semaphore.waiters);
-					f=list_next(f))
-			{
-				wait_thread = list_entry(f, struct thread, elem);
-				if(wait_thread->priority > h_priority)
-					h_priority = wait_thread->priority;
-			}
-		}
-		c->priority = h_priority;
-		//thread_current ()->dpriority = thread_current ()->priority;
-	}
-
-	/*if(l == lock)
-	  {
-	  list_remove(&l->lock_lm);
-	  break;
-	  }*/
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
+}
+
+/* Ensures thread in deepest level has highest priority. */
+	void
+nest_search ()
+{
+	struct thread *c = thread_current();
+	struct list_elem *e;
+	struct list_elem *f;
+	struct lock *c_lock;
+	struct thread *wait_thread;
+	int h_priority = c->dpriority;
+
+	for(e=list_begin(&c->lock_list);
+			e!=list_end(&c->lock_list);
+			e=list_next(e))
+	{
+		c_lock = list_entry(e, struct lock, lock_lm);
+
+		for(f=list_begin(&c_lock->semaphore.waiters);
+				f!=list_end(&c_lock->semaphore.waiters);
+				f=list_next(f))
+		{
+			wait_thread = list_entry(f, struct thread, elem);
+			if(wait_thread->priority > h_priority)
+				h_priority = wait_thread->priority;
+		}
+	}
+	c->priority = h_priority;
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -370,7 +374,6 @@ cond_wait (struct condition *cond, struct lock *lock)
 
 	waiter.holder = thread_current();
 	list_insert_ordered(&cond->waiters, &waiter.elem, &cond_max, NULL);
-	//list_push_back (&cond->waiters, &waiter.elem);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);

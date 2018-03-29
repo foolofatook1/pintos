@@ -8,8 +8,11 @@ rm -rf build/tests/threads/*
 #alarm tests
 "alarm-multiple.result"
 "alarm-negative.result"
+"alarm.result"
 "alarm-priority.result"
 "alarm-simultaneous.result"
+"alarm-single.result"
+"alarm-wait.result"
 "alarm-zero.result"
 
 #priority tests
@@ -22,7 +25,7 @@ rm -rf build/tests/threads/*
 "priority-donate-nest.result"
 "priority-donate-one.result"
 "priority-donate-sema.result"
-"priority-donate-fifo.result"
+"priority-fifo.result"
 "priority-preempt.result"
 "priority-sema.result"
 )

@@ -161,7 +161,6 @@ thread_wake (void)
 		if(t->sleep <= 0)
 		{
 			list_remove(&t->lm);
-			//thread_unblock(&t);
 			sema_up(&t->sema);
 		}
 	}
@@ -178,7 +177,6 @@ thread_sleep (int64_t ticks)
 
 	cur->sleep = ticks;
 	list_push_back(&wait_list, &cur->lm);
-	//thread_block();
 	sema_down(&cur->sema);
 }
 
@@ -654,55 +652,3 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
-
-/* Compare two threads by their wakeup_time. If wakeup_time 
-   is the same, compare thread priorities to break the tie.
-   If true, first thread has earlier wakeup_time and in case 
-   tie, has higher priority. */
-
-/*// One element in the list
-  struct mystruct {
-  char *word;
-  struct list_elem elem;
-  };
-
-
-  Build a list and test that it works.
-
-
-  int test_list() {
-  struct list wordlist;
-  char *stuff[] = {"The","rain","in","Spain","falls",
-  "mainly","in","the","plain.",NULL};
-  int i;
-  struct list_elem *e;
-
-  list_init(&wordlist);
-
-  if (list_empty(&wordlist)) printf("list is empty\n");
-  else printf("list has %d elements\n",list_size(&wordlist));
-
-// Create linked list of mystructs.
-for (i = 0; stuff[i] != NULL; i++) {
-struct mystruct *s = (struct mystruct *) malloc(sizeof(struct mystruct));
-s->word = stuff[i];
-list_push_back (&wordlist, &s->elem); // onto end of list
-}
-if (list_empty(&wordlist)) printf("list is empty\n");
-else printf("list has %d elements\n",list_size(&wordlist));
-
-// Loop over list
-for (e = list_begin(&wordlist);
-e != list_end(&wordlist);
-e = list_next(e) ) {
-struct mystruct *c = list_entry(e,struct mystruct, elem);
-printf("%s\n",c->word);
-
-// You need to find and read the list code to figure this out.
-
-// You then also need to free the dynamically allocated memory!
-
-}
-
-return (0);
-}*/
