@@ -418,6 +418,7 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 		cond_signal (cond, lock);
 }
 
+/* Compares the priorities of semaphore's holders. */
 	bool
 cond_max (const struct list_elem *x, const struct list_elem *y,
 		void *aux UNUSED)
